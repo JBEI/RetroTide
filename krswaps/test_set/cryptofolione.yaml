@@ -1,0 +1,7 @@
+extender_codes: Malonyl-CoA
+job_name: Cryptofolione
+molecule: C1C=CC(=O)O[C@H]1/C=C/C[C@@H](C[C@H](/C=C/C2=CC=CC=C2)O)O
+offload_mech: cyclization
+output_dir: ../RetroTideV2/krswaps/results
+starter_codes: cin
+stereo: all

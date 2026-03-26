@@ -1,0 +1,7 @@
+extender_codes: Malonyl-CoA, Methylmalonyl-CoA
+job_name: Pikronolide
+molecule: CC[C@@H]1[C@@](/C=C/C(=O)[C@@H](C[C@@H]([C@@H]([C@H](C(=O)[C@H](C(=O)O1)C)C)O)C)C)(C)O
+offload_mech: cyclization
+output_dir: ../RetroTideV2/krswaps/results
+starter_codes: Methylmalonyl-CoA
+stereo: all

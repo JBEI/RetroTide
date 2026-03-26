@@ -1,0 +1,7 @@
+job_name: DEBS
+molecule: CC[C@@H]1[C@@H]([C@@H]([C@H](C(=O)[C@@H](C[C@@H]([C@@H]([C@H]([C@@H]([C@H](C(=O)O1)C)O)C)O)C)C)C)O)C
+output_dir: ../RetroTideV2/krswaps/results
+starter_codes: prop
+extender_codes: Methylmalonyl-CoA
+stereo: R/S
+offload_mech: cyclization

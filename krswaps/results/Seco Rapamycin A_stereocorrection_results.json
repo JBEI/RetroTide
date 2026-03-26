@@ -1,0 +1,85 @@
+{
+  "Target Molecule": "CO[C@@H](C[C@@H]1CC[C@@H](C)[C@](O)(C(=O)C(=O)N2CCCC[C@H]2C(=O)O)O1)/C(C)=C/C=C/C=C/[C@@H](C)C[C@@H](C)C(=O)[C@H](OC)[C@H](O)/C(C)=C/[C@@H](C)C(=O)/C=C/[C@H](C)C[C@@H]1CC[C@@H](O)[C@H](OC)C1",
+  "Target PKS Precursor": "C/C(=C\\[C@@H](C)C(=O)/C=C/[C@H](C)C[C@@H]1CC[C@@H](O)[C@H](O)C1)[C@@H](O)CC(=O)[C@H](C)C[C@H](C)/C=C/C=C/C=C(\\C)[C@@H](O)C[C@@H]1CC[C@@H](C)[C@](O)(CC=O)O1",
+  "Final PKS Design": [
+    [
+      "M0",
+      "AT Substrate: DHCH",
+      "Reductive Loop: None"
+    ],
+    [
+      "M1",
+      "AT Substrate: Methylmalonyl-CoA",
+      "Reductive Loop: DH(E)-ER(D)-KR(B1)"
+    ],
+    [
+      "M2",
+      "AT Substrate: Malonyl-CoA",
+      "Reductive Loop: DH(E)-KR(B)"
+    ],
+    [
+      "M3",
+      "AT Substrate: Methylmalonyl-CoA",
+      "Reductive Loop: KR(C2)"
+    ],
+    [
+      "M4",
+      "AT Substrate: Methylmalonyl-CoA",
+      "Reductive Loop: DH(E)-KR(B1)"
+    ],
+    [
+      "M5",
+      "AT Substrate: Malonyl-CoA",
+      "Reductive Loop: KR(B)"
+    ],
+    [
+      "M6",
+      "AT Substrate: Methylmalonyl-CoA",
+      "Reductive Loop: KR(C2)"
+    ],
+    [
+      "M7",
+      "AT Substrate: Methylmalonyl-CoA",
+      "Reductive Loop: DH(E)-ER(L)-KR(B1)"
+    ],
+    [
+      "M8",
+      "AT Substrate: Malonyl-CoA",
+      "Reductive Loop: DH(E)-KR(B)"
+    ],
+    [
+      "M9",
+      "AT Substrate: Malonyl-CoA",
+      "Reductive Loop: DH(E)-KR(B)"
+    ],
+    [
+      "M10",
+      "AT Substrate: Methylmalonyl-CoA",
+      "Reductive Loop: DH(E)-KR(B1)"
+    ],
+    [
+      "M11",
+      "AT Substrate: Malonyl-CoA",
+      "Reductive Loop: KR(B)"
+    ],
+    [
+      "M12",
+      "AT Substrate: Malonyl-CoA",
+      "Reductive Loop: KR(B)"
+    ],
+    [
+      "M13",
+      "AT Substrate: Methylmalonyl-CoA",
+      "Reductive Loop: DH(E)-ER(D)-KR(B1)"
+    ],
+    [
+      "M14",
+      "AT Substrate: Malonyl-CoA",
+      "Reductive Loop: KR(B)"
+    ]
+  ],
+  "Final PKS Product": "C/C(=C\\[C@@H](C)C(=O)/C=C/[C@H](C)CC1CC[C@H](O)[C@H](O)C1)[C@@H](O)CC(=O)[C@H](C)C[C@H](C)/C=C/C=C/C=C(\\C)[C@@H](O)C[C@@H](O)CC[C@@H](C)[C@@H](O)CC(=O)O",
+  "MCS Similarity": 0.7727272727272727,
+  "Initial Jaccard Similarity": 0.2099609375,
+  "Final Jaccard Similarity": 0.2333984375
+}

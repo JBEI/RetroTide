@@ -171,18 +171,134 @@ class Cluster:
             prod = chain
             modulesToExecute = [self.modules[-1]] # last module only
             
-        for module in modulesToExecute:
+        for idx, module in enumerate(modulesToExecute):
             if TE in module.domains:
                 return module.domains[TE].operation(prod)
             
             if prod:
                 moduleStructure = structureDB[module]
-                
-                # perform condensation if this isn't in the starter
-                rxn: ChemicalReaction = AllChem.ReactionFromSmarts(('[#6:10][C:1](=[O:2])[S:3].'
-                                 '[*:4][C:5]~[C:6]>>'
-                                 '[#6:10][C:5]~[C:6]'
+                # Select the previous module relative to current position in modulesToExecute
+                # (instead of always using the second-to-last module of the full cluster)
+                if idx > 0:
+                    prev_mod = modulesToExecute[idx-1]
+                else:
+                    # No previous module within modulesToExecute; skip context-dependent logic
+                    prev_mod = None
+                if DH in module.domains and ER not in module.domains:
+                    if prev_mod and ER in prev_mod.domains: #prev: alkane, current: alkene
+                        if getattr(module.domains[DH], "type", None) == "Z":
+                            rxn: ChemicalReaction = AllChem.ReactionFromSmarts(('[#6:10][C:1](=[O:2])[S:3].'
+                                 '[*:4][C:5]=[C:6][C:7]>>'
+                                 '[#6:10]/[C:5]=[C:6]\[C:7]'
+                                 '.[*:4].[C:1](=[O:2])[S:3]')) # Keep Z stereo
+                        else:
+                            rxn: ChemicalReaction = AllChem.ReactionFromSmarts(('[#6:10][C:1](=[O:2])[S:3].'
+                                    '[*:4][C:5]=[C:6][C:7]>>'
+                                    '[#6:10]/[C:5]=[C:6]/[C:7]'
+                                    '.[*:4].[C:1](=[O:2])[S:3]')) # Keep E stereo
+                    elif prev_mod: #prev: alkene, current: alkene
+                        if (DH in prev_mod.domains and getattr(prev_mod.domains[DH], "type", None) == "Z") and \
+                           (DH in module.domains and getattr(module.domains[DH], "type", None) == "Z"):
+                            rxn: ChemicalReaction = AllChem.ReactionFromSmarts(('[C:12]/[C:11]=[#6:10]\[C:1](=[O:2])[S:3].'
+                                 '[*:4][C:5]=[C:6][C:7]>>'
+                                 '[C:12]/[C:11]=[#6:10]\[C:5]=[C:6]/[C:7]'
                                  '.[*:4].[C:1](=[O:2])[S:3]'))
+                        elif (DH in prev_mod.domains and getattr(prev_mod.domains[DH], "type", None) == "E") and \
+                             (DH in module.domains and getattr(module.domains[DH], "type", None) == "E"):
+                            rxn: ChemicalReaction = AllChem.ReactionFromSmarts(('[C:12]/[C:11]=[#6:10]/[C:1](=[O:2])[S:3].'
+                                    '[*:4][C:5]=[C:6][C:7]>>'
+                                    '[C:12]/[C:11]=[#6:10]/[C:5]=[C:6]/[C:7]'
+                                    '.[*:4].[C:1](=[O:2])[S:3]'))
+                        elif (DH in prev_mod.domains and getattr(prev_mod.domains[DH], "type", None) == "Z") and \
+                             (DH in module.domains and getattr(module.domains[DH], "type", None) == "E"):
+                            rxn: ChemicalReaction = AllChem.ReactionFromSmarts(('[C:12]/[C:11]=[#6:10]\[C:1](=[O:2])[S:3].'
+                                 '[*:4][C:5]=[C:6][C:7]>>'
+                                 '[C:12]/[C:11]=[#6:10]\[C:5]=[C:6]\[C:7]'
+                                 '.[*:4].[C:1](=[O:2])[S:3]'))
+                        elif (DH in prev_mod.domains and getattr(prev_mod.domains[DH], "type", None) == "E") and \
+                             (DH in module.domains and getattr(module.domains[DH], "type", None) == "Z"):
+                            rxn: ChemicalReaction = AllChem.ReactionFromSmarts(('[C:12]/[C:11]=[#6:10]/[C:1](=[O:2])[S:3].'
+                                 '[*:4][C:5]=[C:6][C:7]>>'
+                                 '[C:12]/[C:11]=[#6:10]/[C:5]=[C:6]\[C:7]'
+                                 '.[*:4].[C:1](=[O:2])[S:3]'))
+                        else: # i.e. alc to alkene (no DH in prev_mod)
+                            if getattr(module.domains[DH], "type", None) == "Z":
+                                rxn: ChemicalReaction = AllChem.ReactionFromSmarts(('[#6:10][C:1](=[O:2])[S:3].'
+                                 '[*:4][C:5]=[C:6][C:7]>>'
+                                 '[#6:10]/[C:5]=[C:6]\[C:7]'
+                                 '.[*:4].[C:1](=[O:2])[S:3]')) # Keep Z stereo
+                            else:
+                                rxn: ChemicalReaction = AllChem.ReactionFromSmarts(('[#6:10][C:1](=[O:2])[S:3].'
+                                    '[*:4][C:5]=[C:6][C:7]>>'
+                                    '[#6:10]/[C:5]=[C:6]/[C:7]'
+                                    '.[*:4].[C:1](=[O:2])[S:3]')) # Keep E stereo
+                    else: # no previous module ( - to alkene)
+                        if getattr(module.domains[DH], "type", None) == "Z":
+                            rxn: ChemicalReaction = AllChem.ReactionFromSmarts(('[#6:10][C:1](=[O:2])[S:3].'
+                                 '[*:4][C:5]=[C:6][C:7]>>'
+                                 '[#6:10]/[C:5]=[C:6]\[C:7]'
+                                 '.[*:4].[C:1](=[O:2])[S:3]')) # Keep Z stereo
+                        else:
+                            rxn: ChemicalReaction = AllChem.ReactionFromSmarts(('[#6:10][C:1](=[O:2])[S:3].'
+                                    '[*:4][C:5]=[C:6][C:7]>>'
+                                    '[#6:10]/[C:5]=[C:6]/[C:7]'
+                                    '.[*:4].[C:1](=[O:2])[S:3]')) # Keep E stereo
+                elif DH in module.domains and ER in module.domains: #If ER in current mod, can only have type E DH domains
+                    if prev_mod and ER in prev_mod.domains: #prev: alkane, current: alkane
+                        rxn: ChemicalReaction = AllChem.ReactionFromSmarts(('[#6:10][C:1](=[O:2])[S:3].'
+                                    '[*:4][C:5]~[C:6]>>'
+                                    '[#6:10][C:5]~[C:6]'
+                                    '.[*:4].[C:1](=[O:2])[S:3]'))
+                    elif prev_mod: #prev: alkene, current: alkane
+                        if DH in prev_mod.domains and getattr(prev_mod.domains[DH], "type", None) == "Z":
+                            rxn: ChemicalReaction = AllChem.ReactionFromSmarts(('[C:12]/[C:11]=[#6:10]\[C:1](=[O:2])[S:3].'
+                                    '[*:4][C:5]~[C:6]>>'
+                                    '[C:12]/[C:11]=[#6:10]\[C:5]~[C:6]'
+                                    '.[*:4].[C:1](=[O:2])[S:3]'))
+                        elif DH in prev_mod.domains and getattr(prev_mod.domains[DH], "type", None) == "E":
+                            rxn: ChemicalReaction = AllChem.ReactionFromSmarts(('[C:12]/[C:11]=[#6:10]/[C:1](=[O:2])[S:3].'
+                                 '[*:4][C:5]~[C:6]>>'
+                                 '[C:12]/[C:11]=[#6:10]/[C:5]~[C:6]'
+                                 '.[*:4].[C:1](=[O:2])[S:3]'))
+                        else: #No DH in prev mod either
+                            rxn: ChemicalReaction = AllChem.ReactionFromSmarts(('[#6:10][C:1](=[O:2])[S:3].'
+                                    '[*:4][C:5]~[C:6]>>'
+                                    '[#6:10][C:5]~[C:6]'
+                                    '.[*:4].[C:1](=[O:2])[S:3]'))
+                    else: # no previous module
+                        rxn: ChemicalReaction = AllChem.ReactionFromSmarts(('[#6:10][C:1](=[O:2])[S:3].'
+                                    '[*:4][C:5]~[C:6]>>'
+                                    '[#6:10][C:5]~[C:6]'
+                                    '.[*:4].[C:1](=[O:2])[S:3]'))
+                elif prev_mod and DH not in module.domains: # (i.e. only KR in current domain)
+                    if ER not in prev_mod.domains: 
+                        if DH in prev_mod.domains and getattr(prev_mod.domains[DH], "type", None) == "Z":
+                            rxn: ChemicalReaction = AllChem.ReactionFromSmarts(('[C:12]/[C:11]=[#6:10]\[C:1](=[O:2])[S:3].'
+                                        '[*:4][C:5]~[C:6]>>'
+                                        '[C:12]/[C:11]=[#6:10]\[C:5]~[C:6]'
+                                        '.[*:4].[C:1](=[O:2])[S:3]'))
+                        elif DH in prev_mod.domains and getattr(prev_mod.domains[DH], "type", None) == "E":
+                            rxn: ChemicalReaction = AllChem.ReactionFromSmarts(('[C:12]/[C:11]=[#6:10]/[C:1](=[O:2])[S:3].'
+                                    '[*:4][C:5]~[C:6]>>'
+                                    '[C:12]/[C:11]=[#6:10]/[C:5]~[C:6]'
+                                    '.[*:4].[C:1](=[O:2])[S:3]'))
+                        else: #No DH in prev mod either
+                            rxn: ChemicalReaction = AllChem.ReactionFromSmarts(('[#6:10][C:1](=[O:2])[S:3].'
+                                        '[*:4][C:5]~[C:6]>>'
+                                        '[#6:10][C:5]~[C:6]'
+                                        '.[*:4].[C:1](=[O:2])[S:3]'))
+                    else:
+                        # prev_mod has ER, so prev_mod product is alkane
+                        rxn: ChemicalReaction = AllChem.ReactionFromSmarts(('[#6:10][C:1](=[O:2])[S:3].'
+                                    '[*:4][C:5]~[C:6]>>'
+                                    '[#6:10][C:5]~[C:6]'
+                                    '.[*:4].[C:1](=[O:2])[S:3]'))
+                else:
+                    # perform condensation if this isn't in the starter
+                    rxn: ChemicalReaction = AllChem.ReactionFromSmarts(('[#6:10][C:1](=[O:2])[S:3].'
+                                    '[*:4][C:5]~[C:6]>>'
+                                    '[#6:10][C:5]~[C:6]'
+                                    '.[*:4].[C:1](=[O:2])[S:3]'))
                 
                 prod: Mol = rxn.RunReactants((prod, moduleStructure))[0][0]
                 Chem.SanitizeMol(prod)
@@ -834,15 +950,15 @@ class KR(Domain):
                                                    '[C:5](=[O:6])[S:7]>>'
                                                    '[#0:1][C@@:2]([O:3])[C:4]'
                                                    '[C:5](=[O:6])[S:7]'))
-        elif self.type == 'C1':
-            rxn = AllChem.ReactionFromSmarts(('[#0:1][C:2](=[O:3])[C:4]'
-                                                   '[C:5](=[O:6])[S:7]>>'
-                                                   '[#0:1][C:2](=[O:3])[C@:4]'
-                                                   '[C:5](=[O:6])[S:7]'))
-        elif self.type == 'C2':
+        elif self.type == 'C2': # performs epimerization
             rxn = AllChem.ReactionFromSmarts(('[#0:1][C:2](=[O:3])[C:4]'
                                                    '[C:5](=[O:6])[S:7]>>'
                                                    '[#0:1][C:2](=[O:3])[C@@:4]'
+                                                   '[C:5](=[O:6])[S:7]'))
+        elif self.type == 'C1': # does not change stereochemistry
+            rxn = AllChem.ReactionFromSmarts(('[#0:1][C:2](=[O:3])[C:4]'
+                                                   '[C:5](=[O:6])[S:7]>>'
+                                                   '[#0:1][C:2](=[O:3])[C@:4]'
                                                    '[C:5](=[O:6])[S:7]'))
         else:
             # By first specifying some stereochemistry in the reactants
@@ -892,23 +1008,45 @@ class DH(Domain):
     Keatinge-Clay, Adrian T. "The structures of type I polyketide synthases." Natural product reports 29.10 (2012): 1050-1073.
     doi: 10.1039/c2np20019h
     """
+    TYPE_CHOICES = {'Z', 'E'}
+
+    def __init__(self, active: bool, type: str):
+        """
+        Initializes a new DH domain with specified activity and type.
+
+        Args:
+            active (bool): Indicates whether the domain is active.
+            type (str): The type of the DH domain, must be one of the specified TYPE_CHOICES.
+        
+        Raises:
+            AssertionError: If the type is not one of the specified TYPE_CHOICES.
+        """
+        assert type in self.TYPE_CHOICES, f"Type {type} is not a valid DH domain type."
+        super().__init__(active)
+        self.type = type
 
     @classmethod
     @override
     def designSpace(cls, module: Module = None) -> List[DH]:
         # adding False as a design type specifies that this domain is optional,
         # e.g. a PKS can exist without it
+        updatedTypeChoices = copy(cls.TYPE_CHOICES)
+
         if not module:
-            return [cls(active=True), cls(active=False)]
+            return [cls(active=True, type=type) for type in updatedTypeChoices] + [cls(active=False, type='E')]
 
         if not KR in module.domains:
-            return [cls(active=False)]
+            return [cls(active=False, type='E')]
 
-        # require that we have an active B/B1 KR type
-        if module.domains[KR].active and (module.domains[KR].type in {'B', 'B1', 'U'}):
-            return [cls(active=True), cls(active=False)]
+        # require that we have an active A/B/B1 KR type
+        if module.domains[KR].active and (module.domains[KR].type in {'A', 'B', 'B1', 'U'}):
+            if module and module.domains[KR].type != 'A':
+                updatedTypeChoices.difference_update({'Z'})
+            else:
+                updatedTypeChoices.difference_update({'E'})
+            return [cls(active=True, type=type) for type in updatedTypeChoices] + [cls(active=False, type='E')]
         else:
-            return [cls(active=False)]
+            return [cls(active=False, type='E')]
 
     def operation(self, chain: Mol) -> Mol:
         """
@@ -934,18 +1072,31 @@ class DH(Domain):
         """
         # try setting CH unchanged
         assert len(chain.GetSubstructMatches(Chem.MolFromSmiles('C(O)CC(=O)S'),
-           useChirality=True)) == 1, Chem.MolToSmiles(chain)
+           useChirality=True)) == 1, Chem.MolToSmiles(chain, isomericSmiles=True)
 
-        rxn = AllChem.ReactionFromSmarts(('[#0:1][C:2]([O:3])[C:4][C:6](=[O:7])[S:8]>>'
-                                          '[#0:1][CH1:2]=[CH1:4][C:6](=[O:7])[S:8].[O:3]'))
-                                          # '[#0:1][CH1:2]=[CH1:4][C:6](=[O:7])[S:8].[O:3]'))
+        if self.type == 'Z':
+            rxn = AllChem.ReactionFromSmarts(('[#0:1][C:2]([O:3])[C:4][C:6](=[O:7])[S:8]>>'
+                                              '[#0:1]/[CH1:2]=[CH1:4]\[C:6](=[O:7])[S:8].[O:3]'))
+        elif self.type == 'E':
+            rxn = AllChem.ReactionFromSmarts(('[#0:1][C:2]([O:3])[C:4][C:6](=[O:7])[S:8]>>'
+                                              '[#0:1]/[CH1:2]=[CH1:4]/[C:6](=[O:7])[S:8].[O:3]'))
+        else:
+            rxn = AllChem.ReactionFromSmarts(('[#0:1][C:2]([O:3])[C:4][C:6](=[O:7])[S:8]>>'
+                                              '[#0:1][CH1:2]=[CH1:4][C:6](=[O:7])[S:8].[O:3]'))
         prod = rxn.RunReactants((chain,))[0][0]
         try:
             Chem.SanitizeMol(prod)
         except ValueError: 
             # if this has a methyl attached on the alpha carbon, we'll set CH0
-            rxn = AllChem.ReactionFromSmarts(('[#0:1][C:2]([O:3])[C:4][C:6](=[O:7])[S:8]>>'
-                                              '[#0:1][CH1:2]=[CH0:4][C:6](=[O:7])[S:8].[O:3]'))
+            if self.type == 'Z':
+                rxn = AllChem.ReactionFromSmarts(('[#0:1][C:2]([O:3])[C:4][C:6](=[O:7])[S:8]>>'
+                                                '[#0:1]/[CH1:2]=[CH0:4]\[C:6](=[O:7])[S:8].[O:3]'))
+            elif self.type == 'E':
+                rxn = AllChem.ReactionFromSmarts(('[#0:1][C:2]([O:3])[C:4][C:6](=[O:7])[S:8]>>'
+                                                '[#0:1]/[CH1:2]=[CH0:4]/[C:6](=[O:7])[S:8].[O:3]'))
+            else:
+                rxn = AllChem.ReactionFromSmarts(('[#0:1][C:2]([O:3])[C:4][C:6](=[O:7])[S:8]>>'
+                                                '[#0:1][CH1:2]=[CH0:4][C:6](=[O:7])[S:8].[O:3]'))
             prod = rxn.RunReactants((chain,))[0][0]
             Chem.SanitizeMol(prod)
         return prod
@@ -981,6 +1132,22 @@ class ER(Domain):
     Keatinge-Clay, Adrian T. "The structures of type I polyketide synthases." Natural product reports 29.10 (2012): 1050-1073.
     doi: 10.1039/c2np20019h
     """
+    TYPE_CHOICES = {'L', 'D'}
+
+    def __init__(self, active: bool, type:str):
+        """
+        Initializes a new ER domain with specified activity and type.
+
+        Args:
+            active (bool): Indicates whether the domain is active.
+            type (str): The type of the ER domain, must be one of the specified TYPE_CHOICES.
+        
+        Raises:
+            AssertionError: If the type is not one of the specified TYPE_CHOICES.
+        """
+        assert type in self.TYPE_CHOICES, f"Type {type} is not a valid ER domain type."
+        super().__init__(active)
+        self.type = type
         
     @classmethod
     @override
@@ -997,17 +1164,19 @@ class ER(Domain):
         """
         # adding False as a design type specifies that this domain is optional,
         # e.g. a PKS can exist without it
+        updatedTypeChoices = copy(cls.TYPE_CHOICES)
+        
         if not module:
-            return [cls(active=True), cls(active=False)]
+            return [cls(active=True, type=type) for type in updatedTypeChoices] + [cls(active=False, type = 'L')]
 
         if not DH in module.domains:
-            return [cls(active=False)]
+            return [cls(active=False, type = 'L')]
 
-        # require that we have an active DH type
-        if module.domains[DH].active:
-            return [cls(active=True), cls(active=False)]
+        # require that we have an active DH type (NEED TO REQUIRE AN ACTIVE DH TYPE E ONLY)
+        if module.domains[DH].active and (module.domains[DH].type in {'E'}):
+            return [cls(active=True, type=type) for type in updatedTypeChoices] + [cls(active=False, type = 'L')]
         else:
-            return [cls(active=False)]
+            return [cls(active=False, type = 'L')]
 
     def operation(self, chain: Mol) -> Mol:
         """
@@ -1025,17 +1194,26 @@ class ER(Domain):
            useChirality=True)) == 1, Chem.MolToSmiles(chain)
 
         # try setting CH unchanged
-        rxn = AllChem.ReactionFromSmarts(('[#0:1][C:2]=[C:3][C:4](=[O:5])[S:6]>>'
+        rxn = AllChem.ReactionFromSmarts(('[#0:1]/[C:2]=[C:3]/[C:4](=[O:5])[S:6]>>'
                                           '[#0:1][CH2:2][CH2:3][C:4](=[O:5])[S:6]'))
                                           # '[#0:1][CH2:2][CH2:3][C:4](=[O:5])[S:6]'))
 
         prod = rxn.RunReactants((chain,))[0][0]
         try:
             Chem.SanitizeMol(prod)
-        except ValueError: 
-            rxn = AllChem.ReactionFromSmarts(('[#0:1][C:2]=[C:3][C:4](=[O:5])[S:6]>>'
-                                              '[#0:1][CH2:2][C@@H1:3][C:4](=[O:5])[S:6]'))
-                                              # '[#0:1][CH2:2][CH:3][C:4](=[O:5])[S:6]'))
+        except ValueError:
+            if self.type == 'L':
+                rxn = AllChem.ReactionFromSmarts(('[#0:1]/[C:2]=[C:3]/[C:4](=[O:5])[S:6]>>'
+                                                '[#0:1][CH2:2][C@@H1:3][C:4](=[O:5])[S:6]'))
+                                                # '[#0:1][CH2:2][CH:3][C:4](=[O:5])[S:6]'))
+            elif self.type == 'D':
+                rxn = AllChem.ReactionFromSmarts(('[#0:1]/[C:2]=[C:3]/[C:4](=[O:5])[S:6]>>'
+                                                '[#0:1][CH2:2][C@H1:3][C:4](=[O:5])[S:6]'))
+                                                # '[#0:1][CH2:2][CH:3][C:4](=[O:5])[S:6]'))
+            else:
+                rxn = AllChem.ReactionFromSmarts(('[#0:1]/[C:2]=[C:3]/[C:4](=[O:5])[S:6]>>'
+                                                '[#0:1][CH2:2][CH1:3][C:4](=[O:5])[S:6]'))
+                                                # '[#0:1][CH2:2][CH:3][C:4](=[O:5])[S:6]'))
             prod = rxn.RunReactants((chain,))[0][0]
         return prod
         

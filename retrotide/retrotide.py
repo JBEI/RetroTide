@@ -62,6 +62,7 @@ def compareToTarget(structure: Mol,
 
     # remove C(=O)S from testProduct before comparison
     testProduct = Chem.rdmolops.ReplaceSubstructs(structure, Chem.MolFromSmiles('C(=O)S'), Chem.MolFromSmiles('C'))[0]
+    testProduct = Chem.MolFromSmiles(Chem.MolToSmiles(testProduct, isomericSmiles=True))
     
     if similarity=='mcs':
         # MCS
@@ -201,3 +202,56 @@ def designPKS(targetMol: Mol,
     else:
         # if these designs are no better than before, just return the last round
         return previousDesigns
+
+def designPKS_onestep(targetMol: Mol,
+                      previousDesigns: Optional[List[Tuple[Cluster, float, Mol]]] = None,
+                      maxDesignsPerRound: int = 25,
+                      similarity: str = "atompairs") -> List[Tuple[Cluster, float, Mol]]:
+    """
+    Designs polyketide synthases (PKS) modules for a single round only.
+    This function extends an existing set of PKS module designs by adding a single module
+    and computes their similarity to the target molecule. It does not run recursively.
+    Args:
+        targetMol (Mol): The target molecule for the PKS design.
+        previousDesigns (Optional[List[Tuple[Cluster, float, Mol]]], optional): A list of previous design rounds to continue from.
+            If None, the function starts a new design process. Defaults to None.
+        maxDesignsPerRound (int, optional): The maximum number of designs to consider per round. Defaults to 25.
+        similarity (str, optional): The similarity metric to use for comparing designs to the target molecule.
+            Supported values are ‘atompairs’ and ‘atomatompath’. Defaults to ‘atompairs’.
+    Returns:
+        List[Tuple[Cluster, float, Mol]]: A list of newly generated designs sorted by similarity score (descending).
+    """
+
+    targetpathintegers = None
+    if previousDesigns is None:
+        print("computing module 1")
+        if similarity == "atomatompath":
+            targetpathintegers = getpathintegers(targetMol)
+        # Initialize designs with starter units
+        initial_designs = []
+        for starter in allStarterTypes:
+            cluster = Cluster(modules=[starter])
+            product = cluster.computeProduct(structureDB)
+            initial_designs.append((cluster, 0.0, product))
+        previousDesigns = initial_designs
+    else:
+        print("computing module " + str(len(previousDesigns[0][0].modules) + 1))
+    # Extend the last round of designs with all module types
+    extendedSets = list(itertools.product(previousDesigns, allModuleTypes))
+    designs = [Cluster(modules=x[0][0].modules + [x[1]]) for x in extendedSets]
+    print('   testing ' + str(len(designs)) + ' designs')
+    # Compute structures
+    prevStructures = [x[0][2] for x in extendedSets]
+    structures = [design.computeProduct(structureDB, chain=prevStructure) for design, prevStructure in
+                  zip(designs, prevStructures)]
+    # Compare modules to target
+    scores = [compareToTarget(structure, targetMol, similarity, targetpathintegers) for structure in structures]
+    # Assemble scores
+    assembledScores = list(zip(designs, scores, structures))
+    # Sort designs by score
+    assembledScores.sort(reverse=True, key=lambda x: x[1])
+    # Keep only top designs if necessary
+    if len(assembledScores) > maxDesignsPerRound:
+        assembledScores = assembledScores[:maxDesignsPerRound]
+    
+    return assembledScores

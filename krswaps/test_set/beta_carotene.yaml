@@ -1,0 +1,7 @@
+extender_codes: Malonyl-CoA, Methylmalonyl-CoA
+job_name: Beta Carotene
+molecule: CC1=C(C(CCC1)(C)C)/C=C/C(=C/C=C/C(=C/C=C/C=C(/C=C/C=C(/C=C/C2=C(CCCC2(C)C)C)\C)\C)/C)/C
+offload_mech: thiolysis
+output_dir: ../RetroTideV2/krswaps/results
+starter_codes: DHCHene-CoA
+stereo: all

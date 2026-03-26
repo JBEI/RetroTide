@@ -1,0 +1,7 @@
+extender_codes: Malonyl-CoA, emal
+job_name: Phoslactomycin B
+molecule: CC[C@H]1C=CC(=O)O[C@H]1/C=C/[C@](CCN)([C@@H](C[C@H](/C=C\C=C/C2CCCCC2)O)OP(=O)(O)O)O
+offload_mech: cyclization
+output_dir: ../RetroTideV2/krswaps/results
+starter_codes: CHC-CoA
+stereo: all

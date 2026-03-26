@@ -1,0 +1,7 @@
+extender_codes: Methylmalonyl-CoA
+job_name: 6-deoxyerythronolide B
+molecule: CC[C@@H]1[C@@H]([C@@H]([C@H](C(=O)[C@@H](C[C@@H]([C@@H]([C@H]([C@@H]([C@H](C(=O)O1)C)O)C)O)C)C)C)O)C
+offload_mech: cyclization
+output_dir: ../RetroTideV2/krswaps/results
+starter_codes: prop
+stereo: all

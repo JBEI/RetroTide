@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 class TestCluster(unittest.TestCase):
     def setUp(self):
         self.te_domain = TE(True, True, True)
-        self.dh_domain = DH(True)
+        self.dh_domain = DH(True, 'E')
         self.at_domain = AT(True, substrate="Acetyl-CoA")
         self.module_at = Module(domains={AT: self.at_domain})
         self.module_te = Module(domains={TE: self.te_domain})
@@ -28,8 +28,8 @@ class TestCluster(unittest.TestCase):
     def test_initialization_with_modules(self):
         """Test the __init__ method correctly assigns the modules list when provided."""
         # Create example modules
-        dh_module = Module(domains=OrderedDict([(DH, DH(True))]))
-        er_module = Module(domains=OrderedDict([(ER, ER(True))]))
+        dh_module = Module(domains=OrderedDict([(DH, DH(True, 'E'))]))
+        er_module = Module(domains=OrderedDict([(ER, ER(True, 'L'))]))
         modules_list = [dh_module, er_module]
 
         cluster = Cluster(modules=modules_list)
@@ -174,8 +174,8 @@ class TestCluster(unittest.TestCase):
 class TestModule(unittest.TestCase):
     def setUp(self):
         # Instantiating modules for testing
-        self.dh_domain = DH(True)  # Assuming DH takes an 'active' parameter
-        self.er_domain = ER(True)  # Assuming ER takes an 'active' parameter
+        self.dh_domain = DH(True, 'E')  # Assuming DH takes an 'active' parameter
+        self.er_domain = ER(True, 'L')  # Assuming ER takes an 'active' parameter
         self.module1 = Module(domains=OrderedDict([(DH, self.dh_domain)]), loading=True)
         self.module2 = Module(domains=OrderedDict([(DH, self.dh_domain)]), loading=True)
         self.module3 = Module(domains=OrderedDict([(ER, self.er_domain)]), loading=True)
@@ -207,22 +207,22 @@ class TestModule(unittest.TestCase):
     
     def test_hash_consistency(self):
         """Test that the hash of a module is consistent across calls."""
-        module = Module(product='TestProduct', iterations=2, domains=OrderedDict([(DH, DH(True))]), loading=True)
+        module = Module(product='TestProduct', iterations=2, domains=OrderedDict([(DH, DH(True, 'E'))]), loading=True)
         hash1 = hash(module)
         hash2 = hash(module)
         self.assertEqual(hash1, hash2, "Hash values should be consistent across multiple invocations.")
 
     def test_hash_uniqueness(self):
         """Test that different domain configurations yield different hashes."""
-        module1 = Module(domains=OrderedDict([(DH, DH(True))]), loading=True)
-        module2 = Module(domains=OrderedDict([(ER, ER(True))]), loading=True)
+        module1 = Module(domains=OrderedDict([(DH, DH(True, 'E'))]), loading=True)
+        module2 = Module(domains=OrderedDict([(ER, ER(True, 'L'))]), loading=True)
         self.assertNotEqual(hash(module1), hash(module2), "Different domain configurations should have different hashes.")
 
     def test_hash_is_same_when_same_configuration(self):
         """Test that modules considered 'equal' have the same hash."""
         # Assuming equality could be defined similarly to hashing criteria
-        module1 = Module(domains=OrderedDict([(DH, DH(True))]), loading=True)
-        module2 = Module(domains=OrderedDict([(DH, DH(True))]), loading=True)
+        module1 = Module(domains=OrderedDict([(DH, DH(True, 'E'))]), loading=True)
+        module2 = Module(domains=OrderedDict([(DH, DH(True, 'E'))]), loading=True)
         self.assertEqual(hash(module1), hash(module2), "Equal modules should have the same hash.")
 
     def test_hash_changes_with_attributes(self):
@@ -245,8 +245,8 @@ class TestModule(unittest.TestCase):
         added in different orders, reflecting the order-sensitivity in hashing.
         """
         # Domain instances
-        dh_domain = DH(True)  # Assuming DH takes an 'active' parameter
-        er_domain = ER(True)  # Assuming ER takes an 'active' parameter
+        dh_domain = DH(True, 'E')  # Assuming DH takes an 'active' parameter
+        er_domain = ER(True, 'L')  # Assuming ER takes an 'active' parameter
 
         # Module with domains in one order
         module1 = Module(domains=OrderedDict([(DH, dh_domain), (ER, er_domain)]), loading=True)
@@ -373,8 +373,8 @@ class TestDomain(unittest.TestCase):
         of different classes even when they have identical attribute values.
         """
         # Create instances of different domain classes with the same attribute values
-        er_domain = ER(active=True)
-        dh_domain = DH(active=True)
+        er_domain = ER(active=True, type='L')
+        dh_domain = DH(active=True, type='E')
         
         # Compute hashes for each instance
         er_hash = hash(er_domain)
@@ -481,7 +481,7 @@ class TestAT(unittest.TestCase):
 
 class TestKR(unittest.TestCase):
     def setUp(self):
-        # Setup for testing TE domain
+        # Setup for testing KR domain
         return
     
     def test_init_invalid_type(self):
@@ -590,13 +590,28 @@ class TestKR(unittest.TestCase):
         assert reactants[0].id == 'nadp_c'
 
 class TestDH(unittest.TestCase):
+    def test_init_invalid_type(self):
+        active = True
+        type = 'D'
+
+        with pytest.raises(AssertionError):
+            dh = DH(active, type)
+    
+    def test_init_success(self):
+        active = True
+        type = 'E'
+        dh = DH(active, type)
+
+        assert dh.active == active
+        assert dh.type == type
+        
     def test_dh_design_space_without_module(self):
         # Act
         result = DH.designSpace()
-
+        
         # Assert
         assert isinstance(result, list)
-        assert len(result) == 2
+        assert len(result) == 3
         assert all(isinstance(obj, DH) for obj in result)
         assert any(obj.active for obj in result)
         assert any(not obj.active for obj in result)
@@ -623,20 +638,24 @@ class TestDH(unittest.TestCase):
         assert len(result) == 1
         assert all(not obj.active for obj in result)
 
-    @parameterized.expand(['B', 'B1'])
-    def test_dh_design_space_with_active_kr_of_type_b_b1(self, kr_type):
+    @parameterized.expand(['A', 'B', 'B1'])
+    def test_dh_design_space_with_active_kr_of_type_a_b_b1(self, kr_type):
         # Arrange
         module = Module(loading=True, domains={KR: KR(active=True, type=kr_type)})
 
         # Act
         result = DH.designSpace(module=module)
-
+    
         # Assert
         assert len(result) == 2
         assert any(obj.active for obj in result)
         assert any(not obj.active for obj in result)
-
-    def test_dh_operation_success(self):
+    
+    @parameterized.expand([
+        ('Z','[#0:1][C:2]([O:3])[C:4][C:6](=[O:7])[S:8]>>[#0:1]/[CH1:2]=[CH1:4]\[C:6](=[O:7])[S:8].[O:3]'),
+        ('E','[#0:1][C:2]([O:3])[C:4][C:6](=[O:7])[S:8]>>[#0:1]/[CH1:2]=[CH1:4]/[C:6](=[O:7])[S:8].[O:3]')
+    ])
+    def test_dh_operation_success(self, dh_type, expected_smarts):
         with patch('rdkit.Chem.MolToSmiles') as mock_mol_to_smiles, \
             patch('rdkit.Chem.AllChem.ReactionFromSmarts') as mock_reaction_from_smarts, \
             patch('rdkit.Chem.SanitizeMol') as mock_sanitize:
@@ -653,16 +672,17 @@ class TestDH(unittest.TestCase):
             chain_mock.GetSubstructMatches.return_value = ((1,),)  # Matches the assert condition
 
             # Instantiate DH and call the operation method
-            dh_instance = DH(True)
+            dh_instance = DH(True, dh_type)
             result = dh_instance.operation(chain_mock)
 
             # Verify the behavior and interactions
-            mock_reaction_from_smarts.assert_called_once()  # Since specific SMARTS pattern checking might be too rigid
+            mock_reaction_from_smarts.assert_called_once_with(expected_smarts)  # Since specific SMARTS pattern checking might be too rigid
             reaction_mock.RunReactants.assert_called_once_with((chain_mock,))
             mock_sanitize.assert_called_once_with(reaction_product_mock)
             assert result is reaction_product_mock  # Check if the product is as expected
 
-    def test_dh_operation_retry_after_value_error(self):
+    @parameterized.expand(['Z', 'E'])
+    def test_dh_operation_retry_after_value_error(self, dh_type):
         with patch('rdkit.Chem.MolToSmiles') as mock_mol_to_smiles, \
             patch('rdkit.Chem.AllChem.ReactionFromSmarts') as mock_reaction_from_smarts, \
             patch('rdkit.Chem.SanitizeMol') as mock_sanitize:
@@ -683,7 +703,7 @@ class TestDH(unittest.TestCase):
             chain_mock.GetSubstructMatches.return_value = ((1,),)  # Matches the assert condition twice
 
             # Instantiate DH and call the operation method
-            dh_instance = DH(True)
+            dh_instance = DH(True, dh_type)
             result = dh_instance.operation(chain_mock)
 
             # Verify the behavior and interactions
@@ -691,15 +711,17 @@ class TestDH(unittest.TestCase):
             assert mock_sanitize.call_count == 2  # Called twice, second after catching ValueError
             assert result is reaction_product_mock_second_try  # The result should be the second product
 
-    def test_dh_reactants(self):
-        dh = DH(True)
+    @parameterized.expand(['Z', 'E'])
+    def test_dh_reactants(self, dh_type):
+        dh = DH(True, dh_type)
         reactants = dh.reactants()
         # Verify the reactants list is empty
         assert isinstance(reactants, list), "The reactants should be a list."
         assert len(reactants) == 0, "The reactants list should be empty."
 
-    def test_dh_products(self):
-        dh = DH(True)
+    @parameterized.expand(['Z', 'E'])
+    def test_dh_products(self, dh_type):
+        dh = DH(True, dh_type)
         products = dh.products()
         # Verify the products list contains the correct metabolites
         assert isinstance(products, list), "The products should be a list."
@@ -710,10 +732,25 @@ class TestDH(unittest.TestCase):
         assert h2o.compartment == 'c', "The metabolite compartment should be 'c'."
 
 class TestER(unittest.TestCase):
+    def test_init_invalid_type(self):
+        active = True
+        type = 'J'
+
+        with pytest.raises(AssertionError):
+            er = ER(active, type)
+    
+    def test_init_success(self):
+        active = True
+        type = 'L'
+        er = ER(active, type)
+
+        assert er.active == active
+        assert er.type == type
+
     def test_design_space_without_module(self):
         """Test that designSpace returns both active and inactive ER when no module is provided."""
         result = ER.designSpace()
-        self.assertEqual(len(result), 2)
+        self.assertEqual(len(result), 3)
         self.assertTrue(any(er.active for er in result))
         self.assertTrue(any(not er.active for er in result))
 
@@ -727,7 +764,7 @@ class TestER(unittest.TestCase):
 
     def test_design_space_with_inactive_dh(self):
         """Test that designSpace returns only inactive ER when DH in module domains is inactive."""
-        dh_instance = DH(active=False)
+        dh_instance = DH(active=False, type='E')
         module = MagicMock()
         module.domains = {DH: dh_instance}
         result = ER.designSpace(module=module)
@@ -736,15 +773,16 @@ class TestER(unittest.TestCase):
 
     def test_design_space_with_active_dh(self):
         """Test that designSpace returns both active and inactive ER when DH in module domains is active."""
-        dh_instance = DH(active=True)
+        dh_instance = DH(active=True, type='E')
         module = MagicMock()
         module.domains = {DH: dh_instance}
         result = ER.designSpace(module=module)
-        self.assertEqual(len(result), 2)
+        self.assertEqual(len(result), 3)
         self.assertTrue(any(er.active for er in result))
         self.assertTrue(any(not er.active for er in result))
 
-    def test_er_operation_success(self):
+    @parameterized.expand(['L', 'D'])
+    def test_er_operation_success(self, er_type):
         """Test ER operation success without handling ValueError."""
         with patch('rdkit.Chem.AllChem.ReactionFromSmarts') as mock_reaction_from_smarts, \
             patch('rdkit.Chem.MolToSmiles') as mock_mol_to_smiles, \
@@ -761,7 +799,7 @@ class TestER(unittest.TestCase):
             chain_mock.GetSubstructMatches.return_value = ((1,),)
 
             # Instantiate ER and call the operation method
-            er_instance = ER(True)
+            er_instance = ER(True, er_type)
             result = er_instance.operation(chain_mock)
 
             # Assertions
@@ -782,7 +820,7 @@ class TestER(unittest.TestCase):
         chain_mock = MagicMock()
         chain_mock.GetSubstructMatches.return_value = ()  # No matches, should fail the assertion
 
-        er_instance = ER(True)
+        er_instance = ER(True, 'L')
 
         # Expecting an AssertionError due to the assertion failing
         with self.assertRaises(AssertionError) as context:
@@ -791,7 +829,8 @@ class TestER(unittest.TestCase):
         # Check that the assertion error message contains the expected SMILES string
         self.assertIn('mocked SMILES string', str(context.exception))
 
-    def test_er_operation_handle_value_error(self):
+    @parameterized.expand(['L', 'D'])
+    def test_er_operation_handle_value_error(self, er_type):
         """Test ER operation retries the reaction after ValueError."""
         with patch('rdkit.Chem.AllChem.ReactionFromSmarts') as mock_reaction_from_smarts, \
              patch('rdkit.Chem.MolToSmiles') as mock_mol_to_smiles, \
@@ -809,7 +848,7 @@ class TestER(unittest.TestCase):
             chain_mock.GetSubstructMatches.return_value = ((1,),)
 
             # Instantiate ER and call the operation method
-            er_instance = ER(True)
+            er_instance = ER(True, er_type)
             result = er_instance.operation(chain_mock)
 
             # Assertions
@@ -818,9 +857,10 @@ class TestER(unittest.TestCase):
             self.assertEqual(mock_sanitize.call_count, 1)
             self.assertEqual(result, reaction_product_mock_second_try)
 
-    def test_er_reactants(self):
+    @parameterized.expand(['L', 'D'])
+    def test_er_reactants(self, er_type):
         """Test that ER reactants are correctly returned."""
-        er = ER(True)
+        er = ER(True, er_type)
         reactants = er.reactants()
         self.assertEqual(len(reactants), 2, "There should be two reactants.")
         # Check that each metabolite is an instance of cobra.Metabolite and has the correct ID and compartment
@@ -831,9 +871,10 @@ class TestER(unittest.TestCase):
             self.assertEqual(metabolite.compartment, 'c')
             expected_ids.remove(metabolite.id)  # Remove to ensure both are unique and correct
 
-    def test_er_products(self):
+    @parameterized.expand(['L', 'D'])
+    def test_er_products(self, er_type):
         """Test that ER products are correctly returned."""
-        er = ER(True)
+        er = ER(True, er_type)
         products = er.products()
         self.assertEqual(len(products), 1, "There should be one product.")
         product = products[0]

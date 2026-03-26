@@ -1,0 +1,55 @@
+{
+  "Target Molecule": "C[C@@H]1C[C@H](C)C[C@H](C)[C@@H](O)CC(=O)O[C@H]([C@@H]2CCC[C@H]2C(=O)O)C/C=C/C=C(/C#N)[C@H](O)[C@@H](C)C1",
+  "Target PKS Precursor": "C/C1=C/C=C/C[C@@H]([C@@H]2CCC[C@H]2C(=O)O)OC(=O)C[C@H](O)[C@@H](C)C[C@@H](C)C[C@@H](C)C[C@H](C)[C@H]1O",
+  "Final PKS Design": [
+    [
+      "M0",
+      "AT Substrate: trans-1,2-CPDA",
+      "Reductive Loop: None"
+    ],
+    [
+      "M1",
+      "AT Substrate: Malonyl-CoA",
+      "Reductive Loop: KR(B)"
+    ],
+    [
+      "M2",
+      "AT Substrate: Malonyl-CoA",
+      "Reductive Loop: DH(E)-KR(B)"
+    ],
+    [
+      "M3",
+      "AT Substrate: Methylmalonyl-CoA",
+      "Reductive Loop: DH(E)-KR(B1)"
+    ],
+    [
+      "M4",
+      "AT Substrate: Methylmalonyl-CoA",
+      "Reductive Loop: KR(A1)"
+    ],
+    [
+      "M5",
+      "AT Substrate: Methylmalonyl-CoA",
+      "Reductive Loop: DH(E)-ER(L)-KR(B1)"
+    ],
+    [
+      "M6",
+      "AT Substrate: Methylmalonyl-CoA",
+      "Reductive Loop: DH(E)-ER(L)-KR(B1)"
+    ],
+    [
+      "M7",
+      "AT Substrate: Methylmalonyl-CoA",
+      "Reductive Loop: DH(E)-ER(L)-KR(B1)"
+    ],
+    [
+      "M8",
+      "AT Substrate: Malonyl-CoA",
+      "Reductive Loop: KR(B)"
+    ]
+  ],
+  "Final PKS Product": "C/C1=C\\C=C\\C[C@@H]([C@@H]2CCC[C@H]2C(=O)O)OC(=O)C[C@H](O)[C@@H](C)C[C@@H](C)C[C@@H](C)C[C@H](C)[C@H]1O",
+  "MCS Similarity": 0.9714285714285714,
+  "Initial Jaccard Similarity": 0.5283203125,
+  "Final Jaccard Similarity": 0.69189453125
+}

@@ -1,0 +1,40 @@
+{
+  "Target Molecule": "O=C1C=CC[C@H](/C=C/C[C@H](O)C[C@@H](O)/C=C/c2ccccc2)O1",
+  "Target PKS Precursor": "O=C1C=CC[C@H](/C=C/C[C@H](O)C[C@@H](O)/C=C/c2ccccc2)O1",
+  "Final PKS Design": [
+    [
+      "M0",
+      "AT Substrate: cin",
+      "Reductive Loop: None"
+    ],
+    [
+      "M1",
+      "AT Substrate: Malonyl-CoA",
+      "Reductive Loop: KR(A)"
+    ],
+    [
+      "M2",
+      "AT Substrate: Malonyl-CoA",
+      "Reductive Loop: KR(B)"
+    ],
+    [
+      "M3",
+      "AT Substrate: Malonyl-CoA",
+      "Reductive Loop: DH(E)-KR(B)"
+    ],
+    [
+      "M4",
+      "AT Substrate: Malonyl-CoA",
+      "Reductive Loop: KR(A)"
+    ],
+    [
+      "M5",
+      "AT Substrate: Malonyl-CoA",
+      "Reductive Loop: DH(Z)-KR(A)"
+    ]
+  ],
+  "Final PKS Product": "O=C1C=CC[C@H](/C=C/C[C@H](O)C[C@@H](O)C=Cc2ccccc2)O1",
+  "MCS Similarity": 1.0,
+  "Initial Jaccard Similarity": 0.66552734375,
+  "Final Jaccard Similarity": 0.8046875
+}

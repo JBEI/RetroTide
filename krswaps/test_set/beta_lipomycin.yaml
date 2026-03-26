@@ -1,0 +1,7 @@
+extender_codes: Malonyl-CoA, Methylmalonyl-CoA
+job_name: Beta Lipomycin
+molecule: CC([C@H](O)[C@@H](/C=C(/C=C/C=C/C=C/C=C/C(O)=C1C(N(C)[C@@H](CCC(O)=O)C/1=O)=O)C)C)C
+offload_mech: thiolysis
+output_dir: ../RetroTideV2/krswaps/results
+starter_codes: isobut
+stereo: all

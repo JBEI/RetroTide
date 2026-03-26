@@ -1,0 +1,7 @@
+extender_codes: Malonyl-CoA, Methylmalonyl-CoA
+job_name: Seco Rapamycin A
+molecule: C[C@@H]1CC[C@H](O[C@]1(C(=O)C(=O)N2CCCC[C@H]2C(=O)O)O)C[C@@H](/C(=C/C=C/C=C/[C@@H](C)C[C@@H](C)C(=O)[C@@H]([C@@H](/C(=C/[C@@H](C)C(=O)/C=C/[C@H](C)C[C@@H]3CC[C@H]([C@@H](C3)OC)O)/C)O)OC)/C)OC
+offload_mech: thiolysis
+output_dir: ../RetroTideV2/krswaps/results
+starter_codes: DHCH-CoA
+stereo: all

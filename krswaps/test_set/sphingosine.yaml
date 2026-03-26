@@ -1,0 +1,7 @@
+extender_codes: Malonyl-CoA
+job_name: Sphingosine
+molecule: CCCCCCCCCCCCC/C=C/[C@H]([C@H](CO)N)O
+offload_mech: thiolysis
+output_dir: ../RetroTideV2/krswaps/results
+starter_codes: Methylmalonyl-CoA
+stereo: all
