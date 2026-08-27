@@ -1,0 +1,33 @@
+{
+  "Target Molecule": "CC[C@H]1C=C(C(=O)O)[C@H]2CCC(=O)[C@H]2C1",
+  "Target PKS Precursor": "CC[C@H]1C=C(C(=O)O)[C@H]2CCC(=O)[C@H]2C1",
+  "Final PKS Design": [
+    [
+      "M0",
+      "AT Substrate: cyclopentene",
+      "Reductive Loop: None"
+    ],
+    [
+      "M1",
+      "AT Substrate: emal",
+      "Reductive Loop: KR(C2)"
+    ],
+    [
+      "M2",
+      "AT Substrate: emal",
+      "Reductive Loop: DH(E)-ER(D)-KR(B1)"
+    ],
+    [
+      "M3",
+      "AT Substrate: Malonyl-CoA",
+      "Reductive Loop: DH(E)-KR(B)"
+    ]
+  ],
+  "Final PKS Product": "CC[C@@H](/C=C/C(=O)O)C[C@@H](CC)C(=O)C1=CCCC1=O",
+  "MCS Similarity": 0.75,
+  "Initial Jaccard Similarity": 0.185546875,
+  "Final Jaccard Similarity": 0.185546875,
+  "RetroTide Initialization Runtime (s)": 190.6032673419977,
+  "KR Swaps Runtime (s)": 0.18443441500130575,
+  "Total Runtime (s)": 190.787701756999
+}

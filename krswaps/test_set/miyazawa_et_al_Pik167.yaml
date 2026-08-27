@@ -1,0 +1,7 @@
+extender_codes: Methylmalonyl-CoA
+job_name: (5R,6S)-6-ethyl-3,5-dimethyloxane-2,4-dione
+molecule: O=C(C(C1=O)C)O[C@H]([C@H]1C)CC
+offload_mech: cyclization
+output_dir: ../krswaps/results
+starter_codes: Methylmalonyl-CoA
+stereo: all

@@ -20,7 +20,7 @@ Example:
 """
 
 from rdkit import Chem
-from rdkit.Chem import rdFMCS
+from rdkit.Chem import rdFMCS, rdFingerprintGenerator
 from rdkit import DataStructs
 from rdkit.Chem.AtomPairs import Pairs
 from rdkit.Chem.rdchem import Mol
@@ -97,6 +97,23 @@ def compareToTarget(structure: Mol,
         target_fp = encode(target, max_radius=2, n_permutations=2048, mapping=False)
         testProduct_fp = encode(testProduct, max_radius=2, n_permutations=2048, mapping=False)
         score = jaccard_similarity(target_fp, testProduct_fp)
+    
+    elif similarity=="ecfp_without_stereo": # Extended-connectivity fingerprints
+
+        # compute ECFP4 fingerprints of target and testProduct then get their Tanimoto similarity
+        fpgen = rdFingerprintGenerator.GetMorganGenerator(radius=2, fpSize=2048, includeChirality=False)
+        target_fp = fpgen.GetFingerprint(target)
+        testProduct_fp = fpgen.GetFingerprint(testProduct)
+        score = DataStructs.TanimotoSimilarity(target_fp, testProduct_fp)
+    
+    elif similarity=="ecfp": # Extended-connectivity fingerprints
+
+        # compute ECFP4 fingerprints of target and testProduct then get their Tanimoto similarity
+        # Stereo-aware variant of ECFP4
+        fpgen = rdFingerprintGenerator.GetMorganGenerator(radius=2, fpSize=2048, includeChirality=True)
+        target_fp = fpgen.GetFingerprint(target)
+        testProduct_fp = fpgen.GetFingerprint(testProduct)
+        score = DataStructs.TanimotoSimilarity(target_fp, testProduct_fp)
 
     elif callable(similarity):
         score = similarity(target, testProduct)

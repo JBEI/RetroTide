@@ -1,0 +1,7 @@
+extender_codes: Methylmalonyl-CoA
+job_name: 8,15_dideoxylankanolide
+molecule: C[C@H]([C@@H]([C@H](C([C@@H](C[C@@H]([C@@H]([C@H]([C@@H]([C@H]1C)O)C)O)C)C)=O)C)O)[C@@H]([C@H](CC)C)OC1=O
+offload_mech: cyclization
+output_dir: ../krswaps/results
+starter_codes: 2metbut
+stereo: all

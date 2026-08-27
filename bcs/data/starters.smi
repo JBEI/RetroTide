@@ -9,7 +9,7 @@ CC(=O)[S]	cemal	CoA	cemal
 CC(=O)[S]	Acetyl-CoA	CoA	Acetyl-CoA
 CCC(=O)[S]	prop	CoA	prop
 CC(C)C(=O)[S]	isobut	CoA	isobut
-CCC(C)C(=O)[S]	2metbut	CoA	2metbut
+CC[C@H](C)C(=O)[S]	2metbut	CoA	2metbut
 C1CCCCC1C(=O)[S]	CHC-CoA	CoA	CHC-CoA
 C1CC[C@@H](C(=O)O)[C@@H]1C(=O)[S]	trans-1,2-CPDA	CoA	trans-1,2-CPDA
 C1(=O)C(=CCC1)C(=O)[S]	cyclopentene	CoA	cyclopentene

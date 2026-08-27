@@ -1,0 +1,7 @@
+extender_codes: Malonyl-CoA, Methylmalonyl-CoA, emal
+job_name: Tautomycetin
+molecule: CC/C(=C\C(=O)C[C@H](C)C[C@@H](C)CC[C@@H]([C@H](C)C(=O)C[C@H]([C@H](C)[C@@H](C)OC(=O)C[C@H](C1=C(C(=O)OC1=O)C)O)O)O)/C=C
+offload_mech: thiolysis
+output_dir: ../krswaps/results
+starter_codes: Malonyl-CoA
+stereo: all

@@ -1,0 +1,48 @@
+{
+  "Target Molecule": "CCC[C@@H](C)/C=C(\\C)[C@H](O)[C@H](C)/C=C/CC[C@@H](O)[C@H](C)[C@H](O)[C@H](C)[C@H](O)[C@H](C)[C@H]1O[C@H]([C@H](C)C(=O)O)CC[C@@H]1C",
+  "Target PKS Precursor": "CCC[C@H](C)[C@H](O)[C@H](C)[C@H](O)[C@H](C)[C@@H]1CCC[C@@H]([C@H](C)C(=O)O)O1",
+  "Final PKS Design": [
+    [
+      "M0",
+      "AT Substrate: Methylmalonyl-CoA",
+      "Reductive Loop: None"
+    ],
+    [
+      "M1",
+      "AT Substrate: Methylmalonyl-CoA",
+      "Reductive Loop: DH(E)-ER(L)-KR(B1)"
+    ],
+    [
+      "M2",
+      "AT Substrate: Methylmalonyl-CoA",
+      "Reductive Loop: KR(A2)"
+    ],
+    [
+      "M3",
+      "AT Substrate: Methylmalonyl-CoA",
+      "Reductive Loop: KR(B1)"
+    ],
+    [
+      "M4",
+      "AT Substrate: Malonyl-CoA",
+      "Reductive Loop: KR(B)"
+    ],
+    [
+      "M5",
+      "AT Substrate: Malonyl-CoA",
+      "Reductive Loop: None"
+    ],
+    [
+      "M6",
+      "AT Substrate: Methylmalonyl-CoA",
+      "Reductive Loop: DH(E)-ER(L)-KR(B1)"
+    ]
+  ],
+  "Final PKS Product": "CCC[C@H](C)[C@H](O)[C@H](C)[C@@H](O)[C@@H](C)[C@@H](O)CC(=O)CC[C@H](C)C(=O)O",
+  "MCS Similarity": 0.5853658536585366,
+  "Initial Jaccard Similarity": 0.15087890625,
+  "Final Jaccard Similarity": 0.1708984375,
+  "RetroTide Initialization Runtime (s)": 82.38416002200029,
+  "KR Swaps Runtime (s)": 0.15909597400059283,
+  "Total Runtime (s)": 82.54325599600088
+}

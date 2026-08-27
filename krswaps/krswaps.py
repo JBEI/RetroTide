@@ -2,6 +2,7 @@
 Modules for running RetroTide with the KR Swaps stereochemistry correction algorithm
 """
 import json
+import time
 from collections import namedtuple, OrderedDict
 from typing import Tuple
 from rdkit import Chem
@@ -129,7 +130,7 @@ def initial_pks(target_smi: str) -> tuple[list, Chem.Mol]:
     """
     designs = designPKS(Chem.MolFromSmiles(target_smi),
                         maxDesignsPerRound = 500,
-                        similarity = 'mcs_without_stereo')
+                        similarity = 'mcs_without_stereo') # can replace with any similarity metric supported by retrotide compareToTarget
     pks_design = designs[-1][0][0].modules
     mol = designs[-1][0][0].computeProduct(structureDB)
     return pks_design, mol
@@ -226,8 +227,16 @@ def te_offload(pks_product: Chem.Mol, mol: Chem.Mol, release_mechanism: str) -> 
                     unbound_mol = editable_product.GetMol()
                     Chem.SanitizeMol(unbound_mol)
                     return (unbound_mol,)
-            raise ValueError(f"No hydroxyl group found at the target distance {target_size}. Cannot cyclize")
-        raise ValueError("No valid lactone found in target molecule. Cannot cyclize.")
+            try:
+                raise ValueError(f"No hydroxyl group found at the target distance {target_size}. Cannot cyclize")
+            except ValueError as e:
+                print(f"Warning: {e}")
+            return (pks_product,)
+        try:
+            raise ValueError("No valid lactone found in target molecule. Cannot cyclize.")
+        except ValueError as e:
+            print(f"Warning: {e}")
+        return (pks_product,)
     if release_mechanism not in ['thiolysis', 'cyclization']:
         raise ValueError("Invalid release mechanism. Choose 'thiolysis' or 'cyclization'.")
 
@@ -294,12 +303,43 @@ def extract_precursor_mol(mol: Chem.Mol, precursor_atoms: set) -> Chem.Mol:
         if (idx1 in precursor_atoms) != (idx2 in precursor_atoms):
             break_bonds.append((idx1, idx2))
     for idx1, idx2 in break_bonds:
+        bond = mol_copy.GetBondBetweenAtoms(idx1, idx2)
+        bond_type = bond.GetBondType()
         editable_target.RemoveBond(idx1, idx2)
+        if bond_type == Chem.rdchem.BondType.SINGLE:
+            if idx1 in precursor_atoms:
+                editable_target.AddBond(idx1, editable_target.AddAtom(Chem.Atom('H')), Chem.rdchem.BondType.SINGLE)
+            else:
+                editable_target.AddBond(idx2, editable_target.AddAtom(Chem.Atom('H')), Chem.rdchem.BondType.SINGLE)
+        elif bond_type == Chem.rdchem.BondType.DOUBLE:
+            if idx1 in precursor_atoms:
+                editable_target.AddBond(idx1, editable_target.AddAtom(Chem.Atom('H')), Chem.rdchem.BondType.SINGLE)
+                editable_target.AddBond(idx1, editable_target.AddAtom(Chem.Atom('H')), Chem.rdchem.BondType.SINGLE)
+            else:
+                editable_target.AddBond(idx2, editable_target.AddAtom(Chem.Atom('H')), Chem.rdchem.BondType.SINGLE)
+                editable_target.AddBond(idx2, editable_target.AddAtom(Chem.Atom('H')), Chem.rdchem.BondType.SINGLE)
+        elif bond_type == Chem.rdchem.BondType.TRIPLE:
+            if idx1 in precursor_atoms:
+                editable_target.AddBond(idx1, editable_target.AddAtom(Chem.Atom('H')), Chem.rdchem.BondType.SINGLE)
+                editable_target.AddBond(idx1, editable_target.AddAtom(Chem.Atom('H')), Chem.rdchem.BondType.SINGLE)
+                editable_target.AddBond(idx1, editable_target.AddAtom(Chem.Atom('H')), Chem.rdchem.BondType.SINGLE)
+            else:
+                editable_target.AddBond(idx2, editable_target.AddAtom(Chem.Atom('H')), Chem.rdchem.BondType.SINGLE)
+                editable_target.AddBond(idx2, editable_target.AddAtom(Chem.Atom('H')), Chem.rdchem.BondType.SINGLE)
+                editable_target.AddBond(idx2, editable_target.AddAtom(Chem.Atom('H')), Chem.rdchem.BondType.SINGLE)
     original_atoms = set(range(mol.GetNumAtoms()))
     remove_atoms = sorted(original_atoms - precursor_atoms, reverse=True)
     for atom_idx in remove_atoms:
         editable_target.RemoveAtom(atom_idx)
     precursor_mol = editable_target.GetMol()
+    for atom in precursor_mol.GetAtoms():
+        if atom.GetIsAromatic() and not atom.IsInRing():
+            atom.SetIsAromatic(False)
+    for bond in precursor_mol.GetBonds():
+        if bond.GetIsAromatic() and not bond.IsInRing():
+            bond.SetIsAromatic(False)
+    Chem.SanitizeMol(precursor_mol)
+    precursor_mol = Chem.RemoveHs(precursor_mol)
     return precursor_mol
 
 def get_pks_target(unbound_mol: Chem.Mol, mol: Chem.Mol) -> tuple[Chem.Mol, float]:
@@ -425,7 +465,8 @@ def get_lactone_atoms(mol: Chem.Mol) -> tuple:
     """
     ester_matches = substructure_search(
         mol, '[C:1](=[O:2])[O:3][C:4]')
-    return lactone_size(mol, ester_matches)[1]
+    if ester_matches:
+        return lactone_size(mol, ester_matches)[1]
 
 def find_target_lactone(mol: Chem.Mol, full_map_df: pd.DataFrame) -> tuple:
     """
@@ -440,9 +481,16 @@ def find_target_lactone(mol: Chem.Mol, full_map_df: pd.DataFrame) -> tuple:
     """
     target_lactone_atoms = set()
     lactone_atoms = get_lactone_atoms(mol)
-    for atom in lactone_atoms:
-        target_idx = full_map_df.loc[full_map_df['Product Atom Idx'] == atom, 'Target Atom Idx']
-        target_lactone_atoms.add(int(target_idx))
+    for atom_idx in lactone_atoms:
+        atom = mol.GetAtomWithIdx(atom_idx)
+        try:
+            target_idx = full_map_df.loc[full_map_df['Product Atom Idx'] == atom_idx, 'Target Atom Idx'].iloc[0]
+            target_lactone_atoms.add(int(target_idx))
+        except IndexError:
+            old_idx = int(atom.GetProp("old_mapno"))
+            target_idx = full_map_df.loc[full_map_df['Product Atom Idx'] == old_idx, 'Target Atom Idx'].iloc[0]
+            target_lactone_atoms.add(int(target_idx))
+            print(f"Warning: No target atom mapping found for PKS lactone atom {atom_idx}. Using old map number {old_idx} instead.")
     return tuple(target_lactone_atoms)
 
 def force_target_lactone_alkene(mol: Chem.Mol, lactone_atoms: tuple) -> Chem.Mol:
@@ -488,16 +536,20 @@ def force_pks_lactone_alkene(mol: Chem.Mol, lactone_atoms: tuple, full_map_df: p
                 begin_idx = bond.GetBeginAtomIdx()
                 end_idx = bond.GetEndAtomIdx()
                 if begin_idx in lactone_atoms and end_idx in lactone_atoms:
-                    begin_module = get_mod_number(
-                        full_map_df.loc[full_map_df['Product Atom Idx'] == begin_idx, 'Module Idx'].values[0])
-                    end_module = get_mod_number(
-                        full_map_df.loc[full_map_df['Product Atom Idx'] == end_idx, 'Module Idx'].values[0])
-                    target_module = begin_module if begin_module > end_module else end_module
-                    dh_subtype = pks_features['DH Type'][target_module]
-                    if dh_subtype == 'Z':
-                        bond.SetStereo(Chem.BondStereo.STEREOZ)
-                    elif dh_subtype == 'E':
-                        bond.SetStereo(Chem.BondStereo.STEREOE)
+                    try:
+                        begin_module = get_mod_number(
+                            full_map_df.loc[full_map_df['Product Atom Idx'] == begin_idx, 'Module Idx'].values[0])
+                        end_module = get_mod_number(
+                            full_map_df.loc[full_map_df['Product Atom Idx'] == end_idx, 'Module Idx'].values[0])
+                        target_module = begin_module if begin_module > end_module else end_module
+                        dh_subtype = pks_features['DH Type'][target_module]
+                        if dh_subtype == 'Z':
+                            bond.SetStereo(Chem.BondStereo.STEREOZ)
+                        elif dh_subtype == 'E':
+                            bond.SetStereo(Chem.BondStereo.STEREOE)
+                    except IndexError:
+                        print(f"Warning: No atom index found")
+                        continue
     return mol
 
 # Assess stereochemistry correspondence functions
@@ -618,7 +670,7 @@ def preprocessing(pks_features: dict, unbound_mol: Chem.Mol, target_mol: Chem.Mo
     atom_mapped_df = atom_map(unbound_mol, target_mol)
     full_map_df = full_map(atom_mapped_df, module_mapped_df)
     lactone_atoms = get_lactone_atoms(unbound_mol)
-    if lactone_atoms:
+    if lactone_atoms and len(lactone_atoms) <= 6:
         target_lactone_atoms = find_target_lactone(unbound_mol, full_map_df)
         unbound_mol = force_pks_lactone_alkene(unbound_mol, lactone_atoms,
                                                full_map_df, pks_features)
@@ -626,8 +678,8 @@ def preprocessing(pks_features: dict, unbound_mol: Chem.Mol, target_mol: Chem.Mo
     else:
         Chem.AssignStereochemistry(unbound_mol, force=True, cleanIt=True)
         Chem.AssignStereochemistry(target_mol, force=True, cleanIt=True)
-    chiral_result = get_rs_stereo_correspondence(unbound_mol, target_mol, full_map_df)
     alkene_result = get_ez_stereo_correspondence(unbound_mol, target_mol, full_map_df)
+    chiral_result = get_rs_stereo_correspondence(unbound_mol, target_mol, full_map_df)
     return ProcessingResult(unbound_mol, target_mol, full_map_df, chiral_result, alkene_result)
 
 # Identify stereochemistry mismatch case functions
@@ -936,15 +988,23 @@ def kr_type_logic(pks_features: dict, target_mod: int, alpha: bool, beta: bool) 
         print('    Case 1: Malonyl-CoA has no alpha substituent. Only beta is wrong -> swapping letter only')
     elif (substrate == 'Malonyl-CoA' and pks_features['ER Type'][target_mod] != 'None'):
         new_kr_type = 'B'
-    elif (substrate == 'Methylmalonyl-CoA' and pks_features['DH Type'][target_mod] != 'None'):
+    elif (substrate != 'Malonyl-CoA' and pks_features['DH Type'][target_mod] != 'None'):
         new_kr_type = 'B1'
     # Complex cases
-    elif old_kr_type == 'None':
+    # If reductive loop is none, the alpha-substituent is (S) due to implicit KS domain.
+    # Use C1 (catalytically inactive) as a proxy for the correct (R) stereochemistry.
+    # Only relevant if the substrate has an alpha-substituent.
+    elif (old_kr_type == 'None' and substrate != 'Malonyl-CoA'):
+        if target_mod != 0:
+            new_kr_type = 'C1' # C1 and no KR domain provides same stereochemistry outcome
+        else:
+            print('    Loading module has no reductive loop. Cannot add KR domain')
+    elif old_kr_type == 'C1':
         if alpha:
             new_kr_type = 'C2'
             print('    Case 5: Adding KR type C2 to perform epimerization of the alpha chiral center')
         else:
-            print('    No KR domain and not an alpha carbon mismatch -> cannot fix by KR swap')
+            print('    No hydroxyl group and not an alpha carbon mismatch -> cannot fix by KR swap')
     else:
         letter = old_kr_type[0]
         number = old_kr_type[1:] if len(old_kr_type) >= 2 else '1'
@@ -1124,8 +1184,12 @@ def er_swaps(pks_features: dict, mismatch_results: list) -> dict:
     Returns:
         pks_features (dict): The updated PKS design post ER domain swaps
     """
+    processed_modules = set()
     for result in mismatch_results:
-        identify_er_swap_case(pks_features, result)
+        target_mod = get_mod_number(result['module_i+1'])
+        if target_mod not in processed_modules:
+            identify_er_swap_case(pks_features, result)
+            processed_modules.add(target_mod)
     return pks_features
 
 def dh_swaps(pks_features: dict, mismatch_results: list) -> dict:
@@ -1300,13 +1364,28 @@ def kr_swaps_algorithm(unbound_mol: Chem.Mol, target_mol: Chem.Mol, full_map_df:
     pks_features_updated = dh_swaps(pks_features_updated, alkene_mismatch_results)
 
     krs_result = postprocessing(pks_features_updated, target_mol, offload_mech, type_u_mods)
+
+    problem_mods = set()
+    if krs_result.alkene_result.mmatch1:
+        alkene_mismatch_results_f = get_alkene_mismatch_results(
+            krs_result.pks_product, krs_result.mapping, krs_result.alkene_result)
+        for result in alkene_mismatch_results_f:
+            target_mod = get_mod_number(result['module_i+1'])
+            problem_mods.add(target_mod)
+
     if krs_result.chiral_result.mmatch1:
         print('Correcting remianing R/S mismatches')
         cc_mismatch_results_f, type_u_mods = get_cc_mismatch_results(
             krs_result.pks_product, krs_result.mapping, krs_result.chiral_result)
         pks_features_updated = er_swaps(pks_features_updated, cc_mismatch_results_f)
-        return postprocessing(pks_features_updated, target_mol, offload_mech, type_u_mods)
-    return krs_result
+        krs_result_2 = postprocessing(pks_features_updated, target_mol, offload_mech, type_u_mods)
+        cc_mismatch_results_f2 = get_cc_mismatch_results(
+            krs_result_2.pks_product, krs_result_2.mapping, krs_result_2.chiral_result)[0]
+        for result in cc_mismatch_results_f2:
+            target_mod = get_mod_number(result['module_i+1'])
+            problem_mods.add(target_mod)
+        return krs_result_2, problem_mods
+    return krs_result, problem_mods
 
 # Post processing functions
 def add_atom_labels(mol: Chem.Mol, chiral_centers: dict) -> Chem.Mol:
@@ -1378,15 +1457,23 @@ def visualize_stereo_correspondence(mol1: Chem.Mol, mol2: Chem.Mol, chiral_resul
                       and bond.GetEndAtomIdx() in all_bonds_2]
     
     AllChem.Compute2DCoords(mol1)
+    AllChem.Compute2DCoords(mol2)
     AllChem.GenerateDepictionMatching2DStructure(mol2, mol1, acceptFailure=True)
 
-    svg = Draw.MolsToGridImage([mol1, mol2], legends=['PKS Product', 'Target'],
-                                molsPerRow=2, highlightAtomLists=[all_1, all_2],
-                                highlightAtomColors=[highlight_1, highlight_2],
-                                highlightBondLists=[bond_indices_1, bond_indices_2],
-                                useSVG=True,
-                                subImgSize=(500, 400))
-    
+    img = Draw.rdMolDraw2D.MolDraw2DSVG(1000, 400, 500, 400)
+
+    opts = img.drawOptions()
+    opts.useBWAtomPalette()
+    opts.drawMolsSameScale = True
+    opts.padding = 0.1
+
+    img.DrawMolecules([Chem.RemoveHs(mol1), Chem.RemoveHs(mol2)], legends=['PKS Product', 'Target'],
+                      highlightAtoms=[all_1, all_2],
+                      highlightAtomColors=[highlight_1, highlight_2],
+                      highlightBonds=[bond_indices_1, bond_indices_2],
+                      )
+    img.FinishDrawing()
+    svg = img.GetDrawingText()
     svg = svg.replace(
         "width='500.0' height='400.0' x='0.0' y='0.0'",
         "width='1000.0' height='400.0' x='0.0' y='0.0'"
@@ -1429,13 +1516,17 @@ def krswaps_stereo_correction(target_smi: str, stereo: str, offload_mech: str):
         MCS and Jaccard similarity metrics comparing the predicted PKS product to the entire
         target molecule.
     """
+    alg_tic = time.perf_counter()
     target_mol = Chem.MolFromSmiles(canonicalize_smiles(target_smi, stereo))
+    retrotide_tic = time.perf_counter()
     unbound_pks_product, pks_design_features = get_retro_tide_results(target_smi,
                                                                       stereo,
                                                                       offload_mech)
+    retrotide_toc = time.perf_counter()
+    
     pks_target_mol, mcs_score = get_pks_target(unbound_pks_product, target_mol)
     pp_result = preprocessing(pks_design_features, unbound_pks_product, pks_target_mol)
-    krs_result = kr_swaps_algorithm(
+    krs_result, problem_mods = kr_swaps_algorithm(
         pp_result.unbound_mol,
         pp_result.target_mol,
         pp_result.mapping,
@@ -1443,6 +1534,10 @@ def krswaps_stereo_correction(target_smi: str, stereo: str, offload_mech: str):
         offload_mech,
         pp_result.chiral_result,
         pp_result.alkene_result)
+    alg_toc = time.perf_counter()
+    retrotide_time = retrotide_toc - retrotide_tic
+    alg_time = alg_toc - alg_tic
+    krswaps_time = alg_time - retrotide_time
     return {
         'stereo_before': visualize_stereo_correspondence(pp_result.unbound_mol,
                                                          pp_result.target_mol,
@@ -1458,8 +1553,11 @@ def krswaps_stereo_correction(target_smi: str, stereo: str, offload_mech: str):
         'final_pks_product': Chem.MolToSmiles(krs_result.pks_product),
         'mcs_similarity': mcs_score,
         'jaccard_i': compute_jaccard_sim(pp_result.unbound_mol, target_mol),
-        'jaccard_f': compute_jaccard_sim(krs_result.pks_product, target_mol)
-    }
+        'jaccard_f': compute_jaccard_sim(krs_result.pks_product, target_mol),
+        'retrotide_time': retrotide_time,
+        'krswaps_time': krswaps_time,
+        'total_time': alg_time
+    }, problem_mods
 
 def output_results(results, job_name, output_path):
     """
@@ -1474,7 +1572,10 @@ def output_results(results, job_name, output_path):
             'Final PKS Product': results['final_pks_product'],
             'MCS Similarity': results['mcs_similarity'],
             'Initial Jaccard Similarity': results['jaccard_i'],
-            'Final Jaccard Similarity': results['jaccard_f']
+            'Final Jaccard Similarity': results['jaccard_f'],
+            'RetroTide Initialization Runtime (s)': results['retrotide_time'],
+            'KR Swaps Runtime (s)': results['krswaps_time'],
+            'Total Runtime (s)': results['total_time']
         }, json_file, indent=2)
     with open(f'{output_path}/{job_name}_initial_stereo_correspondence.svg',
               'w', encoding='utf-8') as pre_img:

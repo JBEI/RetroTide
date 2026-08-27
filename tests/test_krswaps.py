@@ -64,18 +64,6 @@ class TestManualTEOffload(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             krs.te_offload(self.bound_product, self.bound_product, 'break_thioester_bond')
     
-    def test_missing_lactone_in_target(self):
-        """Test that ValueError is raised when no valid lactone is found in target molecule."""
-        with self.assertRaises(ValueError) as context:
-            krs.te_offload(self.bound_product, self.bound_product, 'cyclization')
-
-    def test_no_hydroxyl_at_target_distance(self):
-        """Test that ValueError is raised when no hydroxyl group is found at the
-            target distance for cyclization."""
-        target_molecule = Chem.MolFromSmiles('C1OCCCCCC1')
-        with self.assertRaises(ValueError) as context:
-            krs.te_offload(self.bound_product, target_molecule, 'cyclization')
-    
     def test_successful_thiolysis(self):
         offloaded_product = krs.te_offload(self.bound_product, self.bound_product, 'thiolysis')
         self.assertEqual(Chem.MolToSmiles(offloaded_product[0]),
@@ -870,6 +858,9 @@ class TestOutputResults(unittest.TestCase):
             'mcs_similarity': 1.0,
             'jaccard_i': 0.8,
             'jaccard_f': 0.9,
+            'retrotide_time': 10.0,
+            'krswaps_time': 0.5,
+            'total_time': 10.5,
             'stereo_before': '<svg>before</svg>',
             'stereo_after': '<svg>after</svg>',
         }
@@ -896,6 +887,9 @@ class TestOutputResults(unittest.TestCase):
             'mcs_similarity': 0.5,
             'jaccard_i': 0.3,
             'jaccard_f': 0.7,
+            'retrotide_time': 123.45,
+            'krswaps_time': 0.15,
+            'total_time': 123.60,
             'stereo_before': '<svg/>',
             'stereo_after': '<svg/>',
         }
